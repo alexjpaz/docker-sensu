@@ -1,10 +1,16 @@
-FROM debian:jessie
+FROM ruby:2.3-alpine
 MAINTAINER Shane Starcher <shanestarcher@gmail.com>
 
-RUN apt-get update && apt-get install -y wget ca-certificates && apt-get -y clean
-RUN wget -q http://repositories.sensuapp.org/apt/pubkey.gpg -O-  | apt-key add -
-RUN echo "deb     http://repositories.sensuapp.org/apt sensu main" > /etc/apt/sources.list.d/sensu.list
-
+ENV NOKOGIRI_DEPS libxml2-dev libxslt-dev 
+ENV BUILD_DEPS git
+ENV RUNTIME_DEPS bash build-base
+# install sensu-core and ruby plugins
+RUN apk add --no-cache $BUILD_DEPS $NOKOGIRI_DEPS $RUNTIME_DEPS \
+    && gem install sensu \
+    && gem install nokogiri -- --use-system-libraries \
+    && gem install yaml2json \
+    && apk del $BUILD_DEPS && rm -rf /var/cache/apk/*
+    
 
 RUN \
 	apt-get update && \
@@ -27,7 +33,7 @@ RUN gem install yaml2json
 
 ENV ENVTPL_VERSION=0.2.3
 RUN \
-    wget -O /usr/local/bin/envtpl https://github.com/arschles/envtpl/releases/download/${ENVTPL_VERSION}/envtpl_linux_amd64 &&\
+    curl -Lo /usr/local/bin/envtpl https://github.com/arschles/envtpl/releases/download/${ENVTPL_VERSION}/envtpl_linux_amd64 &&\
     chmod +x /usr/local/bin/envtpl
 
 ADD templates /etc/sensu/templates
